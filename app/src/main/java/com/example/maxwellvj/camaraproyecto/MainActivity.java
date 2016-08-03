@@ -1,6 +1,9 @@
 package com.example.maxwellvj.camaraproyecto;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.net.Uri;
 import android.os.Environment;
 import android.provider.MediaStore;
@@ -20,6 +23,10 @@ public class MainActivity extends AppCompatActivity {
     public static final int MEDIA_TYPE_VIDEO = 2;
     static final int REQUEST_VIDEO_CAPTURE = 1;
 
+    BroadcastReceiver mExternalStorageReceiver;
+    boolean mExternalStorageAvailable = false;
+    boolean mExternalStorageWriteable = false;
+
 
     /** Create a file Uri for saving an image or video */
     private static Uri getOutputMediaFileUri(int type){
@@ -32,7 +39,7 @@ public class MainActivity extends AppCompatActivity {
         // using Environment.getExternalStorageState() before doing this.
 
         File mediaStorageDir = new File(Environment.getExternalStoragePublicDirectory(
-                Environment.DIRECTORY_PICTURES), "MyCameraApp");
+                Environment.MEDIA_MOUNTED), "MyCameraApp");
         // This location works best if you want the created images to be shared
         // between applications and persist after your app has been uninstalled.
 
@@ -88,6 +95,43 @@ public class MainActivity extends AppCompatActivity {
                 // Video capture failed, advise user
             }
         }
+    }
+
+    void updateExternalStorageState() {
+        String state = Environment.getExternalStorageState();
+        if (Environment.MEDIA_MOUNTED.equals(state)) {
+            mExternalStorageAvailable = mExternalStorageWriteable = true;
+        } else if (Environment.MEDIA_MOUNTED_READ_ONLY.equals(state)) {
+            mExternalStorageAvailable = true;
+            mExternalStorageWriteable = false;
+        } else {
+            mExternalStorageAvailable = mExternalStorageWriteable = false;
+        }
+        handleExternalStorageState(mExternalStorageAvailable,
+                mExternalStorageWriteable);
+    }
+
+    private void handleExternalStorageState(boolean mExternalStorageAvailable, boolean mExternalStorageWriteable) {
+    }
+
+
+    void startWatchingExternalStorage() {
+        mExternalStorageReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                Log.i("test", "Storage: " + intent.getData());
+                updateExternalStorageState();
+            }
+        };
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(Intent.ACTION_MEDIA_MOUNTED);
+        filter.addAction(Intent.ACTION_MEDIA_REMOVED);
+        registerReceiver(mExternalStorageReceiver, filter);
+        updateExternalStorageState();
+    }
+
+    void stopWatchingExternalStorage() {
+        unregisterReceiver(mExternalStorageReceiver);
     }
 
 }
